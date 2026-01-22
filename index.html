@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Danny Medical Genetics CBT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial; padding: 20px; background:#f4f6f8; }
+    h2 { color:#0d47a1; }
+    .box { background:#fff; padding:20px; border-radius:8px; max-width: 700px; margin:auto; }
+    .timer { font-size:22px; color:#b71c1c; font-weight:bold; }
+    .correct { color: green; }
+    .wrong { color: red; }
+    .explain { background:#e3f2fd; padding:8px; margin:8px 0 15px; border-radius:5px; }
+    input, button { padding:10px; font-size:16px; margin-top:10px; width:100%; }
+    button { background:#0d47a1; color:white; border:none; cursor:pointer; }
+    button:hover { background:#0946a3; }
+  </style>
+</head>
+
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login" class="box">
+  <h2>🧬 Danny Medical Genetics CBT</h2>
+  <p><b>Enter your details to start</b></p>
+  <input type="text" id="name" placeholder="Full Name" required />
+  <input type="text" id="matric" placeholder="Matric Number" required />
+  <button onclick="startTest()">Start Test</button>
+</div>
+
+<!-- CBT PAGE -->
+<div id="cbt" class="box" style="display:none;">
+  <h2>🧬 Danny Medical Genetics CBT</h2>
+  <p id="studentInfo"></p>
+  <p class="timer" id="timer">Time: 4:00</p>
+  <form id="quiz"></form>
+  <button onclick="submitQuiz()">Submit</button>
+</div>
+
+<!-- RESULT PAGE -->
+<div id="result" class="box" style="display:none;"></div>
+
+<script>
+let studentName = "", studentMatric = "";
+
+// Full 30 medical genetics questions with answers & explanations
+const questions = [
+  { q:"Chromosomes primarily function to", o:["Store lipids","Carry genetic information","Produce ATP","Control osmosis"], a:1, e:"Chromosomes contain DNA which carries hereditary genetic information." },
+  { q:"The basic structural unit of chromatin is the", o:["Gene","Chromatid","Nucleosome","Centromere"], a:2, e:"A nucleosome is DNA wrapped around histone proteins." },
+  { q:"DNA replication occurs during the", o:["G1 phase","S phase","G2 phase","M phase"], a:1, e:"The S phase is responsible for synthesis of DNA." },
+  { q:"Centromere function is to", o:["Protect chromosome ends","Attach spindle fibers","Control transcription","Synthesize DNA"], a:1, e:"The centromere is the spindle fiber attachment site." },
+  { q:"Telomeres prevent", o:["Mutation","Chromosome fusion","Crossing over","Translation"], a:1, e:"Telomeres protect chromosome ends from degradation and fusion." },
+  { q:"Normal human somatic cells contain", o:["23 chromosomes","46 chromosomes","44 chromosomes","92 chromosomes"], a:1, e:"Humans have 46 chromosomes (23 pairs) in somatic cells." },
+  { q:"Human gametes are", o:["Diploid","Triploid","Haploid","Tetraploid"], a:2, e:"Gametes contain a haploid number (23 chromosomes) of DNA." },
+  { q:"Failure of chromosome separation is called", o:["Mutation","Non-disjunction","Translocation","Deletion"], a:1, e:"Non-disjunction causes aneuploidies due to failure of chromosome separation." },
+  { q:"Down syndrome is caused by", o:["Monosomy X","Trisomy 21","Trisomy 18","Deletion 5p"], a:1, e:"Down syndrome results from trisomy 21 (three copies of chromosome 21)." },
+  { q:"Edwards syndrome is due to", o:["Trisomy 13","Trisomy 18","Trisomy 21","XO"], a:1, e:"Edwards syndrome is caused by trisomy 18." },
+  { q:"Turner syndrome has the karyotype", o:["XXY","XO","XXX","XYY"], a:1, e:"Turner syndrome is characterized by monosomy X (XO)." },
+  { q:"Klinefelter syndrome is", o:["XO","XX","XXY","XYY"], a:2, e:"Klinefelter syndrome is caused by an extra X chromosome in males (XXY)." },
+  { q:"Barr body represents an", o:["Active X chromosome","Inactive X chromosome","Autosome","Centromere"], a:1, e:"Barr body is the inactivated X chromosome in female cells." },
+  { q:"Mitosis produces cells that are", o:["Haploid","Genetically identical","Gametes","Polyploid"], a:1, e:"Mitosis results in two genetically identical diploid daughter cells." },
+  { q:"Crossing over occurs during", o:["Prophase I","Metaphase I","Anaphase I","Telophase I"], a:0, e:"Crossing over happens during prophase I of meiosis." },
+  { q:"Synapsis occurs between", o:["Sister chromatids","Homologous chromosomes","Autosomes","Sex chromosomes"], a:1, e:"Synapsis is the pairing of homologous chromosomes in meiosis." },
+  { q:"Chiasmata are sites of", o:["Mutation","Crossing over","Deletion","Replication"], a:1, e:"Chiasmata are the physical points where crossing over occurs." },
+  { q:"Meiosis results in", o:["Diploid cells","Triploid cells","Haploid cells","Somatic cells"], a:2, e:"Meiosis produces haploid gametes." },
+  { q:"A karyotype is used to detect", o:["Gene mutation","Chromosomal abnormalities","Protein errors","RNA faults"], a:1, e:"Karyotyping visualizes chromosomes to detect structural abnormalities." },
+  { q:"Deletion is the", o:["Loss of chromosome segment","Gain of chromosome","Reversal of segment","Exchange of segment"], a:0, e:"Deletion means loss of a segment of a chromosome." },
+  { q:"Inversion involves", o:["Loss of chromosome","Reversal of chromosome segment","Duplication","Fusion"], a:1, e:"Inversion is the reversal of a chromosome segment." },
+  { q:"Translocation is the", o:["Loss of segment","Reversal","Exchange between chromosomes","Duplication"], a:2, e:"Translocation is the exchange of chromosome segments between non-homologous chromosomes." },
+  { q:"Aneuploidy refers to", o:["Normal chromosome number","Abnormal chromosome number","Multiple chromosome sets","Gene mutation"], a:1, e:"Aneuploidy means an abnormal number of chromosomes." },
+  { q:"Autosomes are", o:["Sex chromosomes","Non-sex chromosomes","Inactive chromosomes","Mutated chromosomes"], a:1, e:"Autosomes are all chromosomes except the sex chromosomes." },
+  { q:"Sex chromosomes in males are", o:["XX","XY","XO","XXY"], a:1, e:"Males have XY sex chromosomes." },
+  { q:"DNA replication is semi-conservative because", o:["Both strands new","Both strands old","One old and one new strand","Random synthesis"], a:2, e:"Each new DNA molecule contains one old strand and one newly synthesized strand." },
+  { q:"Karyotyping is best done at", o:["Interphase","Prophase","Metaphase","Telophase"], a:2, e:"Metaphase chromosomes are most condensed and ideal for karyotyping." },
+  { q:"X-inactivation ensures", o:["Equal gene dosage","Mutation","Meiosis","Fertilization"], a:0, e:"X-inactivation balances gene expression between males and females." },
+  { q:"Philadelphia chromosome is due to", o:["Deletion","Inversion","Reciprocal translocation","Duplication"], a:2, e:"The Philadelphia chromosome results from a translocation between chromosomes 9 and 22." },
+  { q:"Robertsonian translocation involves", o:["Sex chromosomes","Small acrocentric chromosomes","Metacentric chromosomes","Telomeres"], a:1, e:"Robertsonian translocation involves fusion of small acrocentric chromosomes." },
+  { q:"Deletion of short arm of chromosome 5 causes", o:["Down syndrome","Cri-du-chat syndrome","Turner syndrome","Edwards syndrome"], a:1, e:"Cri-du-chat syndrome results from deletion on chromosome 5p." }
+];
+
+const quiz = document.getElementById("quiz");
+
+function loadQuestions() {
+  quiz.innerHTML = "";
+  questions.forEach((q,i)=>{
+    quiz.innerHTML += `<p><b>${i+1}. ${q.q}</b><br>`;
+    q.o.forEach((opt,j)=>{
+      quiz.innerHTML += `<input type="radio" name="q${i}" value="${j}"> ${opt}<br>`;
+    });
+  });
+}
+
+let time, timer;
+
+function startTest(){
+  studentName = document.getElementById("name").value.trim();
+  studentMatric = document.getElementById("matric").value.trim();
+
+  if(!studentName || !studentMatric){
+    alert("Please enter your Full Name and Matric Number");
+    return;
+  }
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("result").style.display = "none";
+  document.getElementById("cbt").style.display = "block";
+
+  document.getElementById("studentInfo").innerHTML =
+    `<b>Name:</b> ${studentName} <br><b>Matric:</b> ${studentMatric}`;
+
+  loadQuestions();
+
+  time = 240;
+  document.getElementById("timer").textContent = "Time: 4:00";
+
+  timer = setInterval(()=>{
+    let m = Math.floor(time/60);
+    let s = time % 60;
+    document.getElementById("timer").textContent =
+      `Time: ${m}:${s<10?"0":""}${s}`;
+    time--;
+    if(time < 0){
+      clearInterval(timer);
+      submitQuiz();
+    }
+  },1000);
+}
+
+function submitQuiz(){
+  clearInterval(timer);
+
+  document.getElementById("cbt").style.display = "none";
+  document.getElementById("result").style.display = "block";
+
+  let score = 0, output = "";
+
+  questions.forEach((q,i)=>{
+    let selected = document.querySelector(`input[name="q${i}"]:checked`);
+    let ans = selected ? parseInt(selected.value) : -1;
+
+    if(ans === q.a){
+      score++;
+    }
+
+    output += `<p><b>${i+1}. ${q.q}</b><br>`;
+    output += ans === q.a
+      ? `<span class="correct">✔ Correct</span><br>`
+      : `<span class="wrong">✘ Wrong</span><br>`;
+    output += `<div class="explain">
+      <b>Correct Answer:</b> ${q.o[q.a]}<br>
+      <b>Explanation:</b> ${q.e}
+    </div></p>`;
+  });
+
+  // Optional: Send score to Google Sheets here (replace YOUR_GOOGLE_SCRIPT_URL_HERE)
+  /*
+  const payload = {
+    name: studentName,
+    matric: studentMatric,
+    score: score,
+    total: questions.length
+  };
+
+  fetch("YOUR_GOOGLE_SCRIPT_URL_HERE", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  .then(response => response.json())
+  .then(data => console.log("Score saved:", data))
+  .catch(error => console.error("Error saving score:", error));
+  */
+
+  document.getElementById("result").innerHTML =
+    `<h2>Result</h2>
+     <p><b>Name:</b> ${studentName}<br>
+     <b>Matric:</b> ${studentMatric}<br>
+     <b>Score:</b> ${score}/${questions.length}</p>` + output;
+}
+</script>
+
+</body>
+</html>
